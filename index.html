@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talus Meme Maker | Professional Edition</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=Impact&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #8BFFF5; --dark-grey: #000000; --mid-grey: #BEBAB4;
+            --light-grey: #ECEBE9; --border-color: #BEBAB4; --background: #ECEBE9;
+            --white: #FFFFFF; --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --font-ui: 'Inter', sans-serif; --font-meme: 'Impact', sans-serif;
+            --highlight: #FFFFC6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-ui); background-color: var(--background);
+            color: var(--dark-grey); line-height: 1.6;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+        .site-header {
+            background: var(--white); padding: 1rem 0;
+            border-bottom: 2px solid var(--primary-color); margin-bottom: 2rem;
+        }
+        .site-header .container { display: flex; align-items: center; }
+        .site-header .logo { height: 40px; margin-right: 1rem; }
+        .site-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--dark-grey); }
+        #template-feed { display: flex; flex-direction: column; gap: 2rem; }
+        .template-post {
+            background: var(--white); border-radius: 8px;
+            box-shadow: var(--shadow); overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .post-header {
+            padding: 1rem 1.5rem; font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--light-grey);
+        }
+        .post-image-container { background-color: var(--dark-grey); }
+        .post-image {
+            display: block; width: 100%; max-height: 70vh; object-fit: contain;
+        }
+        .post-actions { padding: 1rem 1.5rem; }
+        .create-btn {
+            width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 700;
+            color: var(--dark-grey); background-color: var(--primary-color);
+            border: 2px solid var(--dark-grey); border-radius: 6px; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .create-btn:hover { 
+            background-color: var(--highlight); 
+            transform: translateY(-2px);
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 1000;
+        }
+        .modal-content {
+            background: var(--white); width: 95%; max-width: 1400px;
+            height: 90vh; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; position: relative;
+            border: 2px solid var(--primary-color);
+        }
+        .close-btn {
+            position: absolute; top: 10px; right: 20px; font-size: 2.5rem;
+            color: var(--mid-grey); background: none; border: none; cursor: pointer;
+        }
+
+        .editor-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 1rem;
+            gap: 1rem;
+            overflow: hidden;
+        }
+        .canvas-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--light-grey);
+            border-radius: 8px;
+            min-height: 60vh;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            overflow: auto;
+        }
+        .controls-container {
+            flex-shrink: 0;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 2px solid var(--primary-color);
+            padding-top: 1rem;
+        }
+        .scrollable-controls {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .button-group {
+            flex-shrink: 0;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        @media (min-width: 1024px) {
+            .editor-layout { flex-direction: row; padding: 1.5rem; gap: 1.5rem; }
+            .canvas-container { 
+                flex-grow: 1; 
+                min-height: 70vh;
+            }
+            .controls-container {
+                width: 300px;
+                height: auto;
+                flex-grow: 0;
+                padding-top: 0;
+                border-top: none;
+                border-left: 2px solid var(--primary-color);
+                padding-left: 1rem;
+            }
+            .scrollable-controls { padding-right: 0; }
+        }
+        
+        .controls-container h4 { margin-top: 0; margin-bottom: 0.75rem; color: var(--dark-grey); }
+        .controls-container hr {
+            border: none; border-top: 2px solid var(--primary-color); margin: 1.5rem 0;
+        }
+        .control-group { margin-bottom: 1rem; }
+        .control-group label {
+            display: block; font-size: 0.9rem;
+            margin-bottom: 0.25rem; color: var(--dark-grey); font-weight: 500;
+        }
+        .control-group input, .control-group select {
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;
+            background: var(--white);
+        }
+        .text-align-group div { display: flex; gap: 5px; }
+        .align-btn { 
+            width: 100%; font-weight: bold; 
+            background: var(--light-grey); border: 1px solid var(--border-color);
+            color: var(--dark-grey);
+        }
+        .align-btn:hover { background: var(--primary-color); }
+        .layers-panel {
+            background: var(--light-grey); border-radius: 6px; min-height: 100px;
+            max-height: 200px; overflow-y: auto; padding: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+        .layer-item {
+            padding: 0.5rem 0.75rem; margin-bottom: 5px; border-radius: 4px;
+            cursor: pointer; background: var(--white); border: 1px solid var(--border-color);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .layer-item.active {
+            background: var(--primary-color); color: var(--dark-grey); border-color: var(--dark-grey);
+        }
+        .button-group button {
+            width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 500;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
+            border: 2px solid var(--dark-grey); margin-bottom: 0.5rem;
+        }
+        .button-group button:active { transform: scale(0.98); }
+        #add-text-btn { 
+            background-color: var(--primary-color); color: var(--dark-grey); 
+        }
+        #add-text-btn:hover { background-color: var(--highlight); }
+        #delete-btn { 
+            background-color: #ff6b6b; color: var(--white); 
+            border-color: #ff6b6b;
+        }
+        #delete-btn:hover { background-color: #ff5252; }
+        #download-btn { 
+            background-color: var(--highlight); color: var(--dark-grey); 
+        }
+        #download-btn:hover { background-color: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <img src="https://i.postimg.cc/vm4vwB1k/t-brand-colors.png" alt="Talus Logo" class="logo">
+            <h1>Talus Meme Maker</h1>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="template-feed"></div>
+    </main>
+
+    <div id="editor-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button id="close-modal-btn" class="close-btn">&times;</button>
+            <div class="editor-layout">
+                <div class="canvas-container">
+                    <canvas id="meme-canvas"></canvas>
+                </div>
+                <div class="controls-container">
+                    <div class="scrollable-controls">
+                        <h4>Layers</h4>
+                        <div id="layers-panel" class="layers-panel"></div>
+                        <hr>
+                        <h4>Text Controls</h4>
+                        <div class="control-group">
+                            <label>Font Family</label>
+                            <select id="font-family">
+                                <option>Impact</option>
+                                <option>Anton</option>
+                                <option>Arial</option>
+                                <option>Arial Black</option>
+                                <option>Comic Sans MS</option>
+                                <option>Courier New</option>
+                                <option>Georgia</option>
+                                <option>Helvetica</option>
+                                <option>Times New Roman</option>
+                                <option>Trebuchet MS</option>
+                                <option>Verdana</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Font Size</label>
+                            <input type="range" id="font-size" min="10" max="120" value="40">
+                        </div>
+                        <div class="control-group">
+                            <label>Fill Color</label>
+                            <input type="color" id="text-color" value="#FFFFFF">
+                        </div>
+                        <div class="control-group">
+                            <label>Outline Width</label>
+                            <input type="range" id="stroke-width" min="0" max="10" value="2">
+                        </div>
+                        <div class="control-group">
+                            <label>Outline Color</label>
+                            <input type="color" id="stroke-color" value="#000000">
+                        </div>
+                        <div class="control-group text-align-group">
+                             <label>Align</label>
+                             <div>
+                                <button class="align-btn" data-align="left">L</button>
+                                <button class="align-btn" data-align="center">C</button>
+                                <button class="align-btn" data-align="right">R</button>
+                             </div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="add-text-btn">Add Text</button>
+                        <button id="delete-btn">Delete Layer</button>
+                        <button id="download-btn">Download Meme</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const templates = [
+            { id: "t1", name: "Buff Tally vs Cheems", image: "https://i.postimg.cc/cJFBV34Q/Polish-20250919-235850778.png", textBoxes: 2 },
+            { id: "t2", name: "Lonely Tally", image: "https://i.postimg.cc/9Qpd799v/Polish-20250919-233723355.jpg", textBoxes: 3 },
+            { id: "t3", name: "Tally Epic Handshake", image: "https://i.postimg.cc/Y2WQxZgN/Polish-20250918-034828061.jpg", textBoxes: 1 },
+            { id: "t4", name: "Clown Tally Evolution", image: "https://i.postimg.cc/dVqdw0fn/Polish-20250918-015454711.jpg", textBoxes: 4 },
+            { id: "t5", name: "Surprised Tally", image: "https://i.postimg.cc/9fDDQwYP/Polish-20250917-233416362.png", textBoxes: 1 },
+            { id: "t6", name: "Mood Shifting", image: "https://i.postimg.cc/pX0V5XTs/Polish-20250917-223956970.png", textBoxes: 2 },
+            { id: "t7", name: "It's a Secret", image: "https://i.postimg.cc/pX0V5XTs/Polish-20250917-223956970.png", textBoxes: 1 },
+            { id: "t8", name: "Confused Tally", image: "https://i.postimg.cc/4NH2VW4j/Untitled115-20250913233613.jpg", textBoxes: 2 },
+            { id: "t9", name: "Distracted Tally", image: "https://i.postimg.cc/RZ98mc98/Polish-20250913-055419781.jpg", textBoxes: 1 },
+            { id: "t10", name: "Disaster Tally", image: "https://i.postimg.cc/PqVF19Zs/Polish-20250913-040607940.png", textBoxes: 1 },
+            { id: "t11", name: "Tally No/Yes", image: "https://i.postimg.cc/gcZB6M2Q/Talus-meme-template-1.jpg", textBoxes: 2 },
+            { id: "t12", name: "0 Days Without", image: "https://i.postimg.cc/6qHpL99L/Polish-20250920-174741763.png", textBoxes: 1 }
+        ];
+
+        const templateFeed = document.getElementById('template-feed');
+        const editorModal = document.getElementById('editor-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const layersPanel = document.getElementById('layers-panel');
+        let canvas;
+        const FONT_FAMILY_INPUT = document.getElementById('font-family');
+        const FONT_SIZE_INPUT = document.getElementById('font-size');
+        const TEXT_COLOR_INPUT = document.getElementById('text-color');
+        const STROKE_WIDTH_INPUT = document.getElementById('stroke-width');
+        const STROKE_COLOR_INPUT = document.getElementById('stroke-color');
+
+        function createTemplatePost(template, onEdit) {
+            const post = document.createElement('div');
+            post.className = 'template-post';
+            post.innerHTML = `
+                <div class="post-header"><h3>${template.name}</h3></div>
+                <div class="post-image-container"><img src="${template.image}" alt="${template.name}" class="post-image" loading="lazy"></div>
+                <div class="post-actions"><button class="create-btn">Create Meme</button></div>`;
+            post.querySelector('.create-btn').addEventListener('click', () => onEdit(template));
+            return post;
+        }
+
+        function initializeFeed(onEditCallback) {
+            templates.forEach(template => {
+                const postElement = createTemplatePost(template, onEditCallback);
+                templateFeed.appendChild(postElement);
+            });
+        }
+
+        const showEditor = () => { editorModal.style.display = 'flex'; };
+        const hideEditor = () => { editorModal.style.display = 'none'; };
+        
+        function initializeModal() {
+            closeModalBtn.addEventListener('click', hideEditor);
+        }
+function renderLayers(canvasObjects, activeObject, onLayerClick) {
+            layersPanel.innerHTML = '';
+            canvasObjects.forEach((obj, index) => {
+                if (obj.type === 'textbox') {
+                    const item = document.createElement('div');
+                    item.className = 'layer-item';
+                    item.textContent = obj.text ? (obj.text.substring(0, 20) + (obj.text.length > 20 ? '...' : '')) : `Text ${index + 1}`;
+                    item.dataset.index = index;
+                    if (obj === activeObject) { item.classList.add('active'); }
+                    item.addEventListener('click', () => onLayerClick(obj));
+                    layersPanel.appendChild(item);
+                }
+            });
+        }
+        
+        function initializeCanvas() {
+            canvas = new fabric.Canvas('meme-canvas', {
+                backgroundColor: '#f0f0f0',
+                preserveObjectStacking: true
+            });
+            canvas.on('selection:created', updateControls);
+            canvas.on('selection:updated', updateControls);
+            canvas.on('selection:cleared', updateControls);
+            canvas.on('object:modified', updateLayers);
+            canvas.on('object:added', updateLayers);
+            canvas.on('object:removed', updateLayers);
+            return canvas;
+        }
+
+        function loadTemplate(template) {
+            canvas.remove(...canvas.getObjects());
+            canvas.setBackgroundImage(null, canvas.renderAll.bind(canvas));
+            fabric.Image.fromURL(template.image, (img) => {
+                const container = document.querySelector('.canvas-container');
+                const containerWidth = container.offsetWidth - 30;
+                const containerHeight = container.offsetHeight - 30;
+                
+                // Calculate scale to fit the image properly while maintaining aspect ratio
+                const scaleX = containerWidth / img.width;
+                const scaleY = containerHeight / img.height;
+                const scale = Math.min(scaleX, scaleY, 1.2); // Allow slight upscaling for better visibility
+                
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                
+                // Set canvas size to match the scaled image
+                canvas.setWidth(scaledWidth);
+                canvas.setHeight(scaledHeight);
+                
+                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                    scaleX: scale,
+                    scaleY: scale,
+                    left: 0, 
+                    top: 0,
+                    originX: 'left',
+                    originY: 'top'
+                });
+                
+                // Add text boxes with better positioning
+                for (let i = 0; i < template.textBoxes; i++) { 
+                    addTextObject(i, template.textBoxes); 
+                }
+                canvas.renderAll();
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        function addTextObject(index = 0, totalBoxes = 1) {
+            // Smart positioning based on template and index
+            let topPosition;
+            if (totalBoxes === 1) {
+                topPosition = canvas.height * 0.1; // Single text at top
+            } else if (totalBoxes === 2) {
+                topPosition = index === 0 ? canvas.height * 0.05 : canvas.height * 0.85; // Top and bottom
+            } else if (totalBoxes === 3) {
+                const positions = [0.05, 0.45, 0.85];
+                topPosition = canvas.height * positions[index];
+            } else {
+                topPosition = canvas.height * (0.1 + (index * 0.2)); // Distributed spacing
+            }
+            
+            const text = new fabric.Textbox('ADD TEXT HERE', {
+                left: canvas.width * 0.05,
+                top: Math.max(20, topPosition),
+                width: canvas.width * 0.9,
+                fontSize: Math.min(40, canvas.width / 12), // Responsive font size
+                fontFamily: FONT_FAMILY_INPUT.value,
+                fill: TEXT_COLOR_INPUT.value,
+                stroke: STROKE_COLOR_INPUT.value,
+                strokeWidth: parseInt(STROKE_WIDTH_INPUT.value, 10),
+                textAlign: 'center',
+                cornerColor: '#FF0066',
+cornerStrokeColor: '#000000',
+borderColor: '#FF0066',
+cornerSize: 16,
+                transparentCorners: false,
+                padding: 10,
+                lockScalingFlip: true,
+                hasRotatingPoint: false,
+                minWidth: 50,
+                splitByGrapheme: true
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+            canvas.renderAll();
+        }
+
+        function deleteActiveObject() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) { canvas.remove(activeObject); canvas.renderAll(); }
+        }
+
+        function updateActiveObjectProperty(prop, value) {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) { 
+                activeObject.set(prop, value); 
+                canvas.renderAll(); 
+                updateLayers();
+            }
+        }
+
+        function updateControls() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'textbox') {
+                FONT_FAMILY_INPUT.value = activeObject.fontFamily;
+                FONT_SIZE_INPUT.value = activeObject.fontSize;
+                TEXT_COLOR_INPUT.value = activeObject.fill;
+                STROKE_WIDTH_INPUT.value = activeObject.strokeWidth;
+                STROKE_COLOR_INPUT.value = activeObject.stroke;
+            } else {
+                FONT_FAMILY_INPUT.value = 'Impact';
+                FONT_SIZE_INPUT.value = '40';
+                TEXT_COLOR_INPUT.value = '#FFFFFF';
+                STROKE_WIDTH_INPUT.value = '2';
+                STROKE_COLOR_INPUT.value = '#000000';
+            }
+            updateLayers();
+        }
+
+        function updateLayers() {
+            renderLayers(canvas.getObjects(), canvas.getActiveObject(), (obj) => {
+                canvas.setActiveObject(obj);
+                canvas.renderAll();
+                updateControls();
+            });
+        }
+
+        function setupControls() {
+            document.getElementById('add-text-btn').addEventListener('click', () => addTextObject());
+            document.getElementById('delete-btn').addEventListener('click', deleteActiveObject);
+            FONT_FAMILY_INPUT.addEventListener('change', (e) => updateActiveObjectProperty('fontFamily', e.target.value));
+            FONT_SIZE_INPUT.addEventListener('input', (e) => updateActiveObjectProperty('fontSize', parseInt(e.target.value, 10)));
+            TEXT_COLOR_INPUT.addEventListener('input', (e) => updateActiveObjectProperty('fill', e.target.value));
+            STROKE_WIDTH_INPUT.addEventListener('input', (e) => updateActiveObjectProperty('strokeWidth', parseInt(e.target.value, 10)));
+            STROKE_COLOR_INPUT.addEventListener('input', (e) => updateActiveObjectProperty('stroke', e.target.value));
+            document.querySelectorAll('.align-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    updateActiveObjectProperty('textAlign', e.target.dataset.align);
+                });
+            });
+            document.getElementById('download-btn').addEventListener('click', () => {
+                const dataURL = canvas.toDataURL({ format: 'png', quality: 1.0, multiplier: 2 });
+                const link = document.createElement('a');
+                link.href = dataURL;
+                link.download = 'talus-meme.png';
+                link.click();
+            });
+        }
+        
+        function main() {
+            initializeModal();
+            initializeCanvas();
+            setupControls();
+            
+            const handleEditClick = (template) => {
+                showEditor();
+                setTimeout(() => { 
+                    loadTemplate(template); 
+                }, 100); 
+            };
+            initializeFeed(handleEditClick);
+            
+            console.log("Talus Meme Maker Professional Edition Initialized.");
+        }
+        
+        main();
+    });
+    </script>
+</body>
+</html>
